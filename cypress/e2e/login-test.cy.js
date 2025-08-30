@@ -14,10 +14,14 @@
 describe('OrangeHRM Login Test with correct data', ()=> {
   
   it('login with correct data', () =>{
+    cy.intercept('POST', '**/auth/validate').as('loginRequest')
+
     cy.visit('https://opensource-demo.orangehrmlive.com/web/index.php/auth/login')
     cy.get('[name="username"]').type('Admin')
     cy.get('[name="password"]').type('admin123')
     cy.get('.oxd-button').click()
+
+    cy.wait('@loginRequest').its('response.statusCode').should('eq', 302)
     cy.get('.oxd-topbar-header').should('be.visible')
   })
 
@@ -27,27 +31,39 @@ describe('OrangeHRM Login Test with correct data', ()=> {
   describe('login with incorrect username/password', () => {
 
     it('login with correct username and incorrect password', () =>{
+    cy.intercept('POST', '**/auth/validate').as('loginRequest')
+
     cy.visit('https://opensource-demo.orangehrmlive.com/web/index.php/auth/login')
     cy.get('[name="username"]').type('Admin')
     cy.get('[name="password"]').type('katasandi')
     cy.get('.oxd-button').click()
+
+    cy.wait('@loginRequest').its('response.statusCode').should('eq', 302)
     cy.get('.oxd-alert').should('be.visible')
 
   })
 
     it('login with incorrect username and correct password', () =>{
+    cy.intercept('POST', '**/auth/validate').as('loginRequest')
+
     cy.visit('https://opensource-demo.orangehrmlive.com/web/index.php/auth/login')
     cy.get('[name="username"]').type('User')
     cy.get('[name="password"]').type('admin123')
     cy.get('.oxd-button').click()
+
+    cy.wait('@loginRequest').its('response.statusCode').should('eq', 302)
     cy.get('.oxd-alert').should('be.visible')
 
   })
     it('login with both username and password are incorrect', () => {
+    cy.intercept('POST', '**/auth/validate').as('loginRequest')
+
     cy.visit('https://opensource-demo.orangehrmlive.com/web/index.php/auth/login')
     cy.get('[name="username"]').type('User')
     cy.get('[name="password"]').type('katasandi')
     cy.get('.oxd-button').click()
+
+    cy.wait('@loginRequest').its('response.statusCode').should('eq', 302)
     cy.get('.oxd-alert').should('be.visible')
   })
 
@@ -57,25 +73,31 @@ describe('OrangeHRM Login Test with correct data', ()=> {
 
     it('login with blank username, correct password', () => {
     cy.visit('https://opensource-demo.orangehrmlive.com/web/index.php/auth/login')
+
     cy.get('[name="username"]').clear()
     cy.get('[name="password"]').type('admin123')
     cy.get('.oxd-button').click()
+      
     cy.get(':nth-child(2) > .oxd-input-group > .oxd-text').should('be.visible')
   })
 
     it('login with correct username, blank password', () => {
     cy.visit('https://opensource-demo.orangehrmlive.com/web/index.php/auth/login')
+
     cy.get('[name="username"]').type('Admin')
     cy.get('[name="password"]').clear()
     cy.get('.oxd-button').click()
+
     cy.get(':nth-child(3) > .oxd-input-group > .oxd-text').should('be.visible')
   })
 
     it('login with both username and password are blank', () => {
     cy.visit('https://opensource-demo.orangehrmlive.com/web/index.php/auth/login')
+
     cy.get('[name="username"]').clear()
     cy.get('[name="password"]').clear()
     cy.get('.oxd-button').click()
+
     cy.get(':nth-child(2) > .oxd-input-group > .oxd-text').should('be.visible')
     cy.get(':nth-child(3) > .oxd-input-group > .oxd-text').should('be.visible')
   })
@@ -85,8 +107,13 @@ describe('OrangeHRM Login Test with correct data', ()=> {
   
   describe('verify "Forgot your password?" link navigation', () =>{
     it('verify "Forgot your password?" link navigation', () => {
+
+    cy.intercept('GET', '**/requestPasswordResetCode*').as('forgotPasswordPage')
     cy.visit('https://opensource-demo.orangehrmlive.com/web/index.php/auth/login')
+
     cy.get('.orangehrm-login-forgot > .oxd-text').click()
+    cy.wait('@forgotPasswordPage').its('response.statusCode').should('eq', 200)
+
     cy.url().should('include', '/requestPasswordResetCode')
     cy.get('.oxd-text--h6').should('contain', 'Reset Password')
   })
@@ -97,9 +124,20 @@ describe('OrangeHRM Login Test with correct data', ()=> {
   describe('check login case sensitivity: username in lowercase with correct password', () =>{
     it('should NOT allow login when username is typed in lowercase', () => {
     cy.visit('https://opensource-demo.orangehrmlive.com/web/index.php/auth/login')
+
+    cy.intercept('POST', '**/auth/validate').as('loginRequest')
+
     cy.get('[name="username"]').type('admin') //aslinya 'Admin'
     cy.get('[name="password"]').type('admin123')
     cy.get('.oxd-button').click()
+
+    cy.wait('@loginRequest').then((interception) => {
+    cy.log('Response status:', interception.response.statusCode)
+    cy.log('Response body:', JSON.stringify(interception.response.body))
+
+    expect(interception.response.statusCode).to.be.oneOf([302, 401, 403])
+    })
+
     cy.url().should('include', '/dashboard/index')
     cy.get('.oxd-topbar-header-breadcrumb > .oxd-text').should('be.visible')
 
